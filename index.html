@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <title>CharaClue - Devine l'anime</title>
   <style>
-    /* Mode dark */
     body {
       font-family: Arial, sans-serif;
       background-color: #121212;
@@ -31,18 +30,15 @@
       display: none;
       background-color: #222;
     }
-    input[type="text"] {
+    select {
       padding: 10px;
-      width: 300px;
+      width: 320px;
       font-size: 16px;
       border-radius: 8px;
       border: 1px solid #555;
       margin-top: 20px;
       background-color: #222;
       color: #e0e0e0;
-    }
-    input[type="text"]::placeholder {
-      color: #888;
     }
     button {
       padding: 10px 20px;
@@ -83,7 +79,9 @@
   <div id="character-container"></div>
 
   <div>
-    <input type="text" id="guess-input" placeholder="Entre le nom de l'anime" />
+    <select id="guess-select">
+      <option value="">-- Choisis un anime --</option>
+    </select>
     <button id="submit-btn">Valider</button>
   </div>
 
@@ -94,7 +92,7 @@
     const container = document.getElementById("character-container");
     const feedback = document.getElementById("feedback");
     const timerDisplay = document.getElementById("timer");
-    const guessInput = document.getElementById("guess-input");
+    const guessSelect = document.getElementById("guess-select");
     const submitBtn = document.getElementById("submit-btn");
 
     let currentAnime = null;
@@ -102,14 +100,25 @@
     let gameEnded = false;
     let countdown = 10;
     let countdownInterval = null;
+    let allAnimes = [];
 
-    // Charge le fichier JSON et démarre le jeu
     async function loadAnimes() {
       try {
         const response = await fetch('animes.json');
         const animes = await response.json();
+        allAnimes = animes;
 
-        // Choix aléatoire d'un anime
+        // Remplir le menu déroulant
+        const animeNames = [...new Set(animes.map(a => a.anime))];
+        guessSelect.innerHTML = '<option value="">-- Choisis un anime --</option>';
+        animeNames.forEach(name => {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          guessSelect.appendChild(option);
+        });
+
+        // Choix aléatoire d’un anime pour le jeu
         currentAnime = animes[Math.floor(Math.random() * animes.length)];
         initGame();
       } catch (error) {
@@ -119,13 +128,11 @@
     }
 
     function initGame() {
-      // Nettoie l'affichage
       container.innerHTML = '';
       feedback.textContent = '';
       revealedCount = 0;
       gameEnded = false;
 
-      // Crée les images cachées
       currentAnime.characters.forEach((char, i) => {
         const img = document.createElement("img");
         img.src = char.image;
@@ -135,13 +142,12 @@
         container.appendChild(img);
       });
 
-      // Lance la première révélation et timer
       revealNextCharacter();
 
-      guessInput.disabled = false;
+      guessSelect.disabled = false;
       submitBtn.disabled = false;
-      guessInput.value = '';
-      guessInput.focus();
+      guessSelect.value = '';
+      guessSelect.focus();
     }
 
     function revealNextCharacter() {
@@ -167,7 +173,7 @@
               feedback.className = "error";
               gameEnded = true;
               timerDisplay.textContent = "Jeu terminé.";
-              guessInput.disabled = true;
+              guessSelect.disabled = true;
               submitBtn.disabled = true;
             } else {
               revealNextCharacter();
@@ -181,7 +187,7 @@
 
     function checkGuess() {
       if (gameEnded) return;
-      const guess = guessInput.value.trim().toLowerCase();
+      const guess = guessSelect.value.trim().toLowerCase();
       const answer = currentAnime.anime.toLowerCase();
 
       if (guess === answer) {
@@ -190,10 +196,10 @@
         gameEnded = true;
         clearInterval(countdownInterval);
         timerDisplay.textContent = "Jeu terminé.";
-        guessInput.disabled = true;
+        guessSelect.disabled = true;
         submitBtn.disabled = true;
-        // Affiche tous les personnages restants
-        for(let i = revealedCount; i < currentAnime.characters.length; i++) {
+
+        for (let i = revealedCount; i < currentAnime.characters.length; i++) {
           document.getElementById("char-" + i).style.display = "block";
         }
       } else {
@@ -206,24 +212,19 @@
           feedback.textContent += ` Tu as épuisé tous les indices. C'était "${currentAnime.anime}"`;
           gameEnded = true;
           timerDisplay.textContent = "Jeu terminé.";
-          guessInput.disabled = true;
+          guessSelect.disabled = true;
           submitBtn.disabled = true;
         }
       }
-      guessInput.value = "";
-      guessInput.focus();
+      guessSelect.value = "";
+      guessSelect.focus();
     }
 
     submitBtn.addEventListener("click", checkGuess);
-
-    guessInput.addEventListener("keypress", function(event) {
-      if (event.key === "Enter") {
-        checkGuess();
-      }
-    });
 
     loadAnimes();
   </script>
 </body>
 </html>
+
 
