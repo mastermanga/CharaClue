@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Anime Guess Game</title>
+  <meta charset="UTF-8" />
+  <title>CharaClue - Devine l'anime</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -10,11 +10,9 @@
       text-align: center;
       padding: 20px;
     }
-
     h1 {
       color: #333;
     }
-
     #character-container {
       display: flex;
       flex-wrap: wrap;
@@ -22,7 +20,6 @@
       gap: 10px;
       margin-top: 20px;
     }
-
     .character-img {
       width: 120px;
       height: 120px;
@@ -31,7 +28,6 @@
       border: 2px solid #ccc;
       display: none;
     }
-
     input[type="text"] {
       padding: 10px;
       width: 300px;
@@ -40,7 +36,6 @@
       border: 1px solid #aaa;
       margin-top: 20px;
     }
-
     button {
       padding: 10px 20px;
       font-size: 16px;
@@ -51,108 +46,136 @@
       color: white;
       cursor: pointer;
     }
-
     #feedback {
       margin-top: 20px;
       font-size: 18px;
       font-weight: bold;
     }
-
     .success {
       color: green;
     }
-
     .error {
       color: red;
+    }
+    #timer {
+      margin-top: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #555;
     }
   </style>
 </head>
 <body>
-  <h1>Devine l'anime !</h1>
-  
+  <h1>CharaClue - Devine l'anime !</h1>
+
   <div id="character-container"></div>
-  
-  <input type="text" id="guess-input" placeholder="Entre le nom de l'anime" />
-  <button onclick="checkGuess()">Valider</button>
-  
+
+  <div>
+    <input type="text" id="guess-input" placeholder="Entre le nom de l'anime" />
+    <button onclick="checkGuess()">Valider</button>
+  </div>
+
+  <p id="timer">Temps avant prochain personnage : 15 s</p>
   <p id="feedback"></p>
 
   <script>
-    const animeData = [
-      {
-        "anime": "Kingdom",
-        "characters": [
-          { "name": "Xin", "image": "https://cdn.myanimelist.net/images/characters/6/325105.jpg" },
-          { "name": "Wang Qi", "image": "https://cdn.myanimelist.net/images/characters/4/325104.jpg" },
-          { "name": "Zheng Ying", "image": "https://cdn.myanimelist.net/images/characters/11/325107.jpg" },
-          { "name": "Li Mu", "image": "https://cdn.myanimelist.net/images/characters/3/448177.jpg" },
-          { "name": "Meng Tian", "image": "https://cdn.myanimelist.net/images/characters/14/448175.jpg" },
-          { "name": "Lu Buwei", "image": "https://cdn.myanimelist.net/images/characters/15/448180.jpg" }
-        ]
-      }
-    ];
-
-    const currentAnime = animeData[0];
-    let revealedCount = 0;
-    let autoRevealTimer = null;
-    let gameEnded = false;
+    const imageURL = "https://cdn.myanimelist.net/images/characters/16/306072.jpg";
+    const currentAnime = {
+      anime: "Kingdom",
+      characters: [
+        { name: "Perso 1", image: imageURL },
+        { name: "Perso 2", image: imageURL },
+        { name: "Perso 3", image: imageURL },
+        { name: "Perso 4", image: imageURL },
+        { name: "Perso 5", image: imageURL },
+        { name: "Perso 6", image: imageURL },
+      ]
+    };
 
     const container = document.getElementById("character-container");
     const feedback = document.getElementById("feedback");
+    const timerDisplay = document.getElementById("timer");
+    const guessInput = document.getElementById("guess-input");
 
-    // Préparer les images des personnages
-    currentAnime.characters.forEach((char, index) => {
+    let revealedCount = 0;
+    let gameEnded = false;
+    let countdown = 15;
+    let countdownInterval = null;
+
+    // Créer les images cachées
+    currentAnime.characters.forEach((char, i) => {
       const img = document.createElement("img");
       img.src = char.image;
       img.alt = char.name;
       img.className = "character-img";
-      img.id = "char-" + index;
+      img.id = "char-" + i;
       container.appendChild(img);
     });
 
-    // Affiche le premier personnage
+    // Affiche le prochain personnage et relance le timer
     function revealNextCharacter() {
       if (revealedCount < currentAnime.characters.length) {
-        const nextImg = document.getElementById("char-" + revealedCount);
-        if (nextImg) nextImg.style.display = "block";
+        const img = document.getElementById("char-" + revealedCount);
+        if (img) img.style.display = "block";
         revealedCount++;
-        if (revealedCount < currentAnime.characters.length && !gameEnded) {
-          autoRevealTimer = setTimeout(revealNextCharacter, 15000); // 15 secondes
-        }
+        resetTimer();
+      }
+      if (revealedCount === currentAnime.characters.length) {
+        clearInterval(countdownInterval);
+        timerDisplay.textContent = "Tous les personnages sont révélés.";
       }
     }
 
-    // Lancer le jeu
+    // Timer avec compte à rebours visible
+    function resetTimer() {
+      countdown = 15;
+      timerDisplay.textContent = `Temps avant prochain personnage : ${countdown} s`;
+      if (countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(countdownInterval);
+          if (!gameEnded) {
+            revealNextCharacter();
+          }
+        } else {
+          timerDisplay.textContent = `Temps avant prochain personnage : ${countdown} s`;
+        }
+      }, 1000);
+    }
+
+    // Commencer le jeu : afficher le 1er perso + timer
     revealNextCharacter();
 
     function checkGuess() {
-      const guess = document.getElementById("guess-input").value.trim().toLowerCase();
+      if (gameEnded) return;
+      const guess = guessInput.value.trim().toLowerCase();
       const answer = currentAnime.anime.toLowerCase();
 
-      if (gameEnded) return;
-
       if (guess === answer) {
-        feedback.textContent = "🎉 Bonne réponse ! C'était bien " + currentAnime.anime;
+        feedback.textContent = `🎉 Bonne réponse ! C'était bien "${currentAnime.anime}"`;
         feedback.className = "success";
         gameEnded = true;
-        clearTimeout(autoRevealTimer);
+        clearInterval(countdownInterval);
+        timerDisplay.textContent = "Jeu terminé.";
         // Affiche tous les personnages restants
-        for (let i = revealedCount; i < currentAnime.characters.length; i++) {
+        for(let i = revealedCount; i < currentAnime.characters.length; i++) {
           document.getElementById("char-" + i).style.display = "block";
         }
       } else {
         feedback.textContent = "❌ Mauvaise réponse.";
         feedback.className = "error";
-
-        // Révèle immédiatement un personnage si dispo
         if (revealedCount < currentAnime.characters.length) {
-          clearTimeout(autoRevealTimer);
+          clearInterval(countdownInterval);
           revealNextCharacter();
         } else {
-          feedback.textContent += " Tu as épuisé tous les indices. C'était " + currentAnime.anime;
+          feedback.textContent += ` Tu as épuisé tous les indices. C'était "${currentAnime.anime}"`;
           gameEnded = true;
+          timerDisplay.textContent = "Jeu terminé.";
         }
       }
+      guessInput.value = "";
+      guessInput.focus();
     }
   </script>
 </body>
