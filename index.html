@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Anime Guess Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    #character-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .character-img {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 2px solid #ccc;
+      display: none;
+    }
+
+    input[type="text"] {
+      padding: 10px;
+      width: 300px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #aaa;
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-left: 10px;
+      border: none;
+      border-radius: 8px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+
+    #feedback {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .success {
+      color: green;
+    }
+
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Devine l'anime !</h1>
+  
+  <div id="character-container"></div>
+  
+  <input type="text" id="guess-input" placeholder="Entre le nom de l'anime" />
+  <button onclick="checkGuess()">Valider</button>
+  
+  <p id="feedback"></p>
+
+  <script>
+    const animeData = [
+      {
+        "anime": "Kingdom",
+        "characters": [
+          { "name": "Xin", "image": "https://cdn.myanimelist.net/images/characters/6/325105.jpg" },
+          { "name": "Wang Qi", "image": "https://cdn.myanimelist.net/images/characters/4/325104.jpg" },
+          { "name": "Zheng Ying", "image": "https://cdn.myanimelist.net/images/characters/11/325107.jpg" },
+          { "name": "Li Mu", "image": "https://cdn.myanimelist.net/images/characters/3/448177.jpg" },
+          { "name": "Meng Tian", "image": "https://cdn.myanimelist.net/images/characters/14/448175.jpg" },
+          { "name": "Lu Buwei", "image": "https://cdn.myanimelist.net/images/characters/15/448180.jpg" }
+        ]
+      }
+    ];
+
+    const currentAnime = animeData[0];
+    let revealedCount = 0;
+    let autoRevealTimer = null;
+    let gameEnded = false;
+
+    const container = document.getElementById("character-container");
+    const feedback = document.getElementById("feedback");
+
+    // Préparer les images des personnages
+    currentAnime.characters.forEach((char, index) => {
+      const img = document.createElement("img");
+      img.src = char.image;
+      img.alt = char.name;
+      img.className = "character-img";
+      img.id = "char-" + index;
+      container.appendChild(img);
+    });
+
+    // Affiche le premier personnage
+    function revealNextCharacter() {
+      if (revealedCount < currentAnime.characters.length) {
+        const nextImg = document.getElementById("char-" + revealedCount);
+        if (nextImg) nextImg.style.display = "block";
+        revealedCount++;
+        if (revealedCount < currentAnime.characters.length && !gameEnded) {
+          autoRevealTimer = setTimeout(revealNextCharacter, 15000); // 15 secondes
+        }
+      }
+    }
+
+    // Lancer le jeu
+    revealNextCharacter();
+
+    function checkGuess() {
+      const guess = document.getElementById("guess-input").value.trim().toLowerCase();
+      const answer = currentAnime.anime.toLowerCase();
+
+      if (gameEnded) return;
+
+      if (guess === answer) {
+        feedback.textContent = "🎉 Bonne réponse ! C'était bien " + currentAnime.anime;
+        feedback.className = "success";
+        gameEnded = true;
+        clearTimeout(autoRevealTimer);
+        // Affiche tous les personnages restants
+        for (let i = revealedCount; i < currentAnime.characters.length; i++) {
+          document.getElementById("char-" + i).style.display = "block";
+        }
+      } else {
+        feedback.textContent = "❌ Mauvaise réponse.";
+        feedback.className = "error";
+
+        // Révèle immédiatement un personnage si dispo
+        if (revealedCount < currentAnime.characters.length) {
+          clearTimeout(autoRevealTimer);
+          revealNextCharacter();
+        } else {
+          feedback.textContent += " Tu as épuisé tous les indices. C'était " + currentAnime.anime;
+          gameEnded = true;
+        }
+      }
+    }
+  </script>
+</body>
+</html>
