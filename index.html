@@ -4,14 +4,16 @@
   <meta charset="UTF-8" />
   <title>CharaClue - Devine l'anime</title>
   <style>
+    /* Mode dark */
     body {
       font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
+      background-color: #121212;
+      color: #e0e0e0;
       text-align: center;
       padding: 20px;
     }
     h1 {
-      color: #333;
+      color: #ffffff;
     }
     #character-container {
       display: flex;
@@ -25,16 +27,22 @@
       height: 120px;
       object-fit: cover;
       border-radius: 10px;
-      border: 2px solid #ccc;
+      border: 2px solid #444;
       display: none;
+      background-color: #222;
     }
     input[type="text"] {
       padding: 10px;
       width: 300px;
       font-size: 16px;
       border-radius: 8px;
-      border: 1px solid #aaa;
+      border: 1px solid #555;
       margin-top: 20px;
+      background-color: #222;
+      color: #e0e0e0;
+    }
+    input[type="text"]::placeholder {
+      color: #888;
     }
     button {
       padding: 10px 20px;
@@ -42,9 +50,13 @@
       margin-left: 10px;
       border: none;
       border-radius: 8px;
-      background-color: #4CAF50;
+      background-color: #3a7afe;
       color: white;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #2a5edb;
     }
     #feedback {
       margin-top: 20px;
@@ -52,16 +64,16 @@
       font-weight: bold;
     }
     .success {
-      color: green;
+      color: #4caf50;
     }
     .error {
-      color: red;
+      color: #e03e3e;
     }
     #timer {
       margin-top: 10px;
       font-size: 16px;
       font-weight: bold;
-      color: #555;
+      color: #bbb;
     }
   </style>
 </head>
@@ -72,47 +84,66 @@
 
   <div>
     <input type="text" id="guess-input" placeholder="Entre le nom de l'anime" />
-    <button onclick="checkGuess()">Valider</button>
+    <button id="submit-btn">Valider</button>
   </div>
 
-  <p id="timer">Temps avant prochain personnage : 15 s</p>
+  <p id="timer">Chargement...</p>
   <p id="feedback"></p>
 
   <script>
-    const imageURL = "https://cdn.myanimelist.net/images/characters/16/306072.jpg";
-    const currentAnime = {
-      anime: "Kingdom",
-      characters: [
-        { name: "Perso 1", image: imageURL },
-        { name: "Perso 2", image: imageURL },
-        { name: "Perso 3", image: imageURL },
-        { name: "Perso 4", image: imageURL },
-        { name: "Perso 5", image: imageURL },
-        { name: "Perso 6", image: imageURL },
-      ]
-    };
-
     const container = document.getElementById("character-container");
     const feedback = document.getElementById("feedback");
     const timerDisplay = document.getElementById("timer");
     const guessInput = document.getElementById("guess-input");
+    const submitBtn = document.getElementById("submit-btn");
 
+    let currentAnime = null;
     let revealedCount = 0;
     let gameEnded = false;
-    let countdown = 15;
+    let countdown = 10;
     let countdownInterval = null;
 
-    // Créer les images cachées
-    currentAnime.characters.forEach((char, i) => {
-      const img = document.createElement("img");
-      img.src = char.image;
-      img.alt = char.name;
-      img.className = "character-img";
-      img.id = "char-" + i;
-      container.appendChild(img);
-    });
+    // Charge le fichier JSON et démarre le jeu
+    async function loadAnimes() {
+      try {
+        const response = await fetch('animes.json');
+        const animes = await response.json();
 
-    // Affiche le prochain personnage et relance le timer
+        // Choix aléatoire d'un anime
+        currentAnime = animes[Math.floor(Math.random() * animes.length)];
+        initGame();
+      } catch (error) {
+        timerDisplay.textContent = "Erreur de chargement des données.";
+        console.error(error);
+      }
+    }
+
+    function initGame() {
+      // Nettoie l'affichage
+      container.innerHTML = '';
+      feedback.textContent = '';
+      revealedCount = 0;
+      gameEnded = false;
+
+      // Crée les images cachées
+      currentAnime.characters.forEach((char, i) => {
+        const img = document.createElement("img");
+        img.src = char.image;
+        img.alt = char.name;
+        img.className = "character-img";
+        img.id = "char-" + i;
+        container.appendChild(img);
+      });
+
+      // Lance la première révélation et timer
+      revealNextCharacter();
+
+      guessInput.disabled = false;
+      submitBtn.disabled = false;
+      guessInput.value = '';
+      guessInput.focus();
+    }
+
     function revealNextCharacter() {
       if (revealedCount < currentAnime.characters.length) {
         const img = document.getElementById("char-" + revealedCount);
@@ -120,32 +151,33 @@
         revealedCount++;
         resetTimer();
       }
-      if (revealedCount === currentAnime.characters.length) {
-        clearInterval(countdownInterval);
-        timerDisplay.textContent = "Tous les personnages sont révélés.";
-      }
     }
 
-    // Timer avec compte à rebours visible
     function resetTimer() {
-      countdown = 15;
-      timerDisplay.textContent = `Temps avant prochain personnage : ${countdown} s`;
+      countdown = 10;
+      timerDisplay.textContent = `Temps restant : ${countdown} s`;
       if (countdownInterval) clearInterval(countdownInterval);
       countdownInterval = setInterval(() => {
         countdown--;
         if (countdown <= 0) {
           clearInterval(countdownInterval);
           if (!gameEnded) {
-            revealNextCharacter();
+            if (revealedCount === currentAnime.characters.length) {
+              feedback.textContent = `⏰ Temps écoulé ! Tu as perdu. C'était "${currentAnime.anime}".`;
+              feedback.className = "error";
+              gameEnded = true;
+              timerDisplay.textContent = "Jeu terminé.";
+              guessInput.disabled = true;
+              submitBtn.disabled = true;
+            } else {
+              revealNextCharacter();
+            }
           }
         } else {
-          timerDisplay.textContent = `Temps avant prochain personnage : ${countdown} s`;
+          timerDisplay.textContent = `Temps restant : ${countdown} s`;
         }
       }, 1000);
     }
-
-    // Commencer le jeu : afficher le 1er perso + timer
-    revealNextCharacter();
 
     function checkGuess() {
       if (gameEnded) return;
@@ -158,6 +190,8 @@
         gameEnded = true;
         clearInterval(countdownInterval);
         timerDisplay.textContent = "Jeu terminé.";
+        guessInput.disabled = true;
+        submitBtn.disabled = true;
         // Affiche tous les personnages restants
         for(let i = revealedCount; i < currentAnime.characters.length; i++) {
           document.getElementById("char-" + i).style.display = "block";
@@ -172,11 +206,24 @@
           feedback.textContent += ` Tu as épuisé tous les indices. C'était "${currentAnime.anime}"`;
           gameEnded = true;
           timerDisplay.textContent = "Jeu terminé.";
+          guessInput.disabled = true;
+          submitBtn.disabled = true;
         }
       }
       guessInput.value = "";
       guessInput.focus();
     }
+
+    submitBtn.addEventListener("click", checkGuess);
+
+    guessInput.addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+        checkGuess();
+      }
+    });
+
+    loadAnimes();
   </script>
 </body>
 </html>
+
