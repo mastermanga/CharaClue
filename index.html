@@ -18,19 +18,19 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 10px;
+      gap: 15px;
       margin-top: 20px;
     }
     .character-img {
-      width: 120px;
-      height: 120px;
+      width: 180px;
+      height: 180px;
       object-fit: cover;
       border-radius: 10px;
       border: 2px solid #444;
       display: none;
       background-color: #222;
     }
-    select {
+    input[type="text"] {
       padding: 10px;
       width: 320px;
       font-size: 16px;
@@ -39,6 +39,10 @@
       margin-top: 20px;
       background-color: #222;
       color: #e0e0e0;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #3a7afe;
     }
     button {
       padding: 10px 20px;
@@ -62,6 +66,7 @@
       margin-top: 20px;
       font-size: 18px;
       font-weight: bold;
+      min-height: 24px;
     }
     .success {
       color: #4caf50;
@@ -75,6 +80,9 @@
       font-weight: bold;
       color: #bbb;
     }
+    #controls {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -82,11 +90,10 @@
 
   <div id="character-container"></div>
 
-  <div>
-    <select id="guess-select">
-      <option value="">-- Choisis un anime --</option>
-    </select>
+  <div id="controls">
+    <input type="text" id="guess-input" placeholder="Écris le nom de l'anime ici" autocomplete="off" />
     <button id="submit-btn" disabled>Valider</button>
+    <button id="restart-btn" style="display:none;">Rejouer</button>
   </div>
 
   <p id="timer">Chargement...</p>
@@ -96,8 +103,9 @@
     const container = document.getElementById("character-container");
     const feedback = document.getElementById("feedback");
     const timerDisplay = document.getElementById("timer");
-    const guessSelect = document.getElementById("guess-select");
+    const guessInput = document.getElementById("guess-input");
     const submitBtn = document.getElementById("submit-btn");
+    const restartBtn = document.getElementById("restart-btn");
 
     let currentAnime = null;
     let revealedCount = 0;
@@ -112,28 +120,20 @@
         const animes = await response.json();
         allAnimes = animes;
 
-        const animeTitles = [...new Set(animes.map(a => a.title))];
-        guessSelect.innerHTML = '<option value="">-- Choisis un anime --</option>';
-        animeTitles.forEach(title => {
-          const option = document.createElement("option");
-          option.value = title;
-          option.textContent = title;
-          guessSelect.appendChild(option);
-        });
-
-        currentAnime = animes[Math.floor(Math.random() * animes.length)];
-        initGame();
+        startNewGame();
       } catch (error) {
         timerDisplay.textContent = "Erreur de chargement des données.";
         console.error(error);
       }
     }
 
-    function initGame() {
+    function startNewGame() {
+      currentAnime = allAnimes[Math.floor(Math.random() * allAnimes.length)];
       container.innerHTML = '';
       feedback.textContent = '';
       revealedCount = 0;
       gameEnded = false;
+      restartBtn.style.display = 'none';
 
       currentAnime.characters.forEach((char, i) => {
         const img = document.createElement("img");
@@ -146,10 +146,14 @@
 
       revealNextCharacter();
 
-      guessSelect.disabled = false;
+      guessInput.disabled = false;
       submitBtn.disabled = true;
-      guessSelect.value = '';
-      guessSelect.focus();
+      guessInput.value = '';
+      guessInput.focus();
+
+      timerDisplay.textContent = '';
+      clearInterval(countdownInterval);
+      resetTimer();
     }
 
     function revealNextCharacter() {
@@ -187,17 +191,26 @@
     function checkGuess() {
       if (gameEnded) return;
 
-      const guess = guessSelect.value;
+      const guess = guessInput.value.trim();
       if (!guess) {
-        feedback.textContent = "⚠️ Tu dois choisir un anime dans la liste.";
+        feedback.textContent = "⚠️ Tu dois écrire un nom d'anime.";
         feedback.className = "error";
         return;
       }
 
-      const answer = currentAnime.title;
+      // Vérifier si la saisie correspond à un titre connu (ignore la casse)
+      const normalizedGuess = guess.toLowerCase();
+      const validTitles = allAnimes.map(a => a.title.toLowerCase());
+      if (!validTitles.includes(normalizedGuess)) {
+        feedback.textContent = "⚠️ Cet anime n'est pas dans la liste.";
+        feedback.className = "error";
+        return;
+      }
 
-      if (guess === answer) {
-        feedback.textContent = `🎉 Bonne réponse ! C'était bien "${answer}"`;
+      const answer = currentAnime.title.toLowerCase();
+
+      if (normalizedGuess === answer) {
+        feedback.textContent = `🎉 Bonne réponse ! C'était bien "${currentAnime.title}"`;
         feedback.className = "success";
         clearInterval(countdownInterval);
         for (let i = revealedCount; i < currentAnime.characters.length; i++) {
@@ -211,30 +224,37 @@
           clearInterval(countdownInterval);
           revealNextCharacter();
         } else {
-          feedback.textContent += ` Tu as épuisé tous les indices. C'était "${answer}".`;
+          feedback.textContent += ` Tu as épuisé tous les indices. C'était "${currentAnime.title}".`;
           endGame();
         }
       }
 
-      guessSelect.value = '';
+      guessInput.value = '';
       submitBtn.disabled = true;
-      guessSelect.focus();
+      guessInput.focus();
     }
 
     function endGame() {
       gameEnded = true;
-      guessSelect.disabled = true;
+      guessInput.disabled = true;
       submitBtn.disabled = true;
+      restartBtn.style.display = 'inline-block';
       timerDisplay.textContent = "Jeu terminé.";
     }
 
-    guessSelect.addEventListener("change", () => {
-      submitBtn.disabled = !guessSelect.value;
+    guessInput.addEventListener("input", () => {
+      submitBtn.disabled = guessInput.value.trim() === '';
+      feedback.textContent = '';
     });
 
     submitBtn.addEventListener("click", checkGuess);
+
+    restartBtn.addEventListener("click", () => {
+      startNewGame();
+    });
 
     loadAnimes();
   </script>
 </body>
 </html>
+
